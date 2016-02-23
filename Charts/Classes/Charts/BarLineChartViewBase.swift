@@ -1029,7 +1029,79 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
         calculateOffsets()
         setNeedsDisplay()
     }
-
+    
+    /// Zooms by the specified scale factor to the specified values on the specified axis.
+    ///
+    /// - parameter xIndex:
+    /// - parameter yValue:
+    /// - parameter axis: which axis should be used as a reference for the y-axis
+    /// - parameter duration: the duration of the animation in seconds
+    /// - parameter easing:
+    public func zoomAndCenterViewAnimated(
+        xIndex xIndex: CGFloat,
+        yValue: Double,
+        axis: ChartYAxis.AxisDependency,
+        duration: NSTimeInterval,
+        easing: ChartEasingFunctionBlock?)
+    {
+        let bounds = getValueByTouchPoint(
+            pt: CGPoint(x: viewPortHandler.contentLeft, y: viewPortHandler.contentTop),
+            axis: axis)
+        
+        let valsInView = getDeltaY(axis) / _viewPortHandler.scaleY
+        let xsInView = CGFloat(xAxis.values.count) / _viewPortHandler.scaleX
+        
+        let job = AnimatedZoomViewJob(
+            viewPortHandler: viewPortHandler,
+            transformer: getTransformer(axis),
+            view: self,
+            scaleX: scaleX,
+            scaleY: scaleY,
+            xOrigin: viewPortHandler.scaleX,
+            yOrigin: viewPortHandler.scaleY,
+            zoomCenterX: xIndex - xsInView / 2.0,
+            zoomCenterY: CGFloat(yValue) + valsInView / 2.0,
+            zoomOriginX: bounds.x,
+            zoomOriginY: bounds.y,
+            duration: duration,
+            easing: easing)
+        
+        addViewportJob(job)
+    }
+    
+    /// Zooms by the specified scale factor to the specified values on the specified axis.
+    ///
+    /// - parameter xIndex:
+    /// - parameter yValue:
+    /// - parameter axis: which axis should be used as a reference for the y-axis
+    /// - parameter duration: the duration of the animation in seconds
+    /// - parameter easing:
+    public func zoomAndCenterViewAnimated(
+        xIndex xIndex: CGFloat,
+        yValue: Double,
+        axis: ChartYAxis.AxisDependency,
+        duration: NSTimeInterval,
+        easingOption: ChartEasingOption)
+    {
+        zoomAndCenterViewAnimated(xIndex: xIndex, yValue: yValue, axis: axis, duration: duration, easing: easingFunctionFromOption(easingOption))
+    }
+    
+    /// Zooms by the specified scale factor to the specified values on the specified axis.
+    ///
+    /// - parameter xIndex:
+    /// - parameter yValue:
+    /// - parameter axis: which axis should be used as a reference for the y-axis
+    /// - parameter duration: the duration of the animation in seconds
+    /// - parameter easing:
+    public func zoomAndCenterViewAnimated(
+        xIndex xIndex: CGFloat,
+        yValue: Double,
+        axis: ChartYAxis.AxisDependency,
+        duration: NSTimeInterval)
+    {
+        zoomAndCenterViewAnimated(xIndex: xIndex, yValue: yValue, axis: axis, duration: duration, easingOption: .EaseInOutSine)
+    }
+    
     /// Resets all zooming and dragging and makes the chart fit exactly it's bounds.
     public func fitScreen()
     {
@@ -1086,19 +1158,16 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
 
     /// Moves the left side of the current viewport to the specified x-index.
     /// This also refreshes the chart by calling setNeedsDisplay().
-    public func moveViewToX(xIndex: Int)
+    public func moveViewToX(xIndex: CGFloat)
     {
-        if (_viewPortHandler.hasChartDimens)
-        {
-            var pt = CGPoint(x: CGFloat(xIndex), y: 0.0)
-            
-            getTransformer(.Left).pointValueToPixel(&pt)
-            _viewPortHandler.centerViewPort(pt: pt, chart: self)
-        }
-        else
-        {
-            _sizeChangeEventActions.append({[weak self] () in self?.moveViewToX(xIndex); })
-        }
+        let job = MoveViewJob(
+            viewPortHandler: viewPortHandler,
+            xIndex: xIndex,
+            yValue: 0.0,
+            transformer: getTransformer(.Left),
+            view: self)
+        
+        addViewportJob(job)
     }
 
     /// Centers the viewport to the specified y-value on the y-axis.
@@ -1106,21 +1175,18 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
     /// 
     /// - parameter yValue:
     /// - parameter axis: - which axis should be used as a reference for the y-axis
-    public func moveViewToY(yValue: CGFloat, axis: ChartYAxis.AxisDependency)
+    public func moveViewToY(yValue: Double, axis: ChartYAxis.AxisDependency)
     {
-        if (_viewPortHandler.hasChartDimens)
-        {
-            let valsInView = getDeltaY(axis) / _viewPortHandler.scaleY
-            
-            var pt = CGPoint(x: 0.0, y: yValue + valsInView / 2.0)
-            
-            getTransformer(axis).pointValueToPixel(&pt)
-            _viewPortHandler.centerViewPort(pt: pt, chart: self)
-        }
-        else
-        {
-            _sizeChangeEventActions.append({[weak self] () in self?.moveViewToY(yValue, axis: axis); })
-        }
+        let valsInView = getDeltaY(axis) / _viewPortHandler.scaleY
+        
+        let job = MoveViewJob(
+            viewPortHandler: viewPortHandler,
+            xIndex: 0,
+            yValue: yValue + Double(valsInView) / 2.0,
+            transformer: getTransformer(axis),
+            view: self)
+        
+        addViewportJob(job)
     }
 
     /// This will move the left side of the current viewport to the specified x-index on the x-axis, and center the viewport to the specified y-value on the y-axis.
@@ -1129,21 +1195,88 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
     /// - parameter xIndex:
     /// - parameter yValue:
     /// - parameter axis: - which axis should be used as a reference for the y-axis
-    public func moveViewTo(xIndex xIndex: Int, yValue: CGFloat, axis: ChartYAxis.AxisDependency)
+    public func moveViewTo(xIndex xIndex: CGFloat, yValue: Double, axis: ChartYAxis.AxisDependency)
     {
-        if (_viewPortHandler.hasChartDimens)
-        {
-            let valsInView = getDeltaY(axis) / _viewPortHandler.scaleY
-            
-            var pt = CGPoint(x: CGFloat(xIndex), y: yValue + valsInView / 2.0)
-            
-            getTransformer(axis).pointValueToPixel(&pt)
-            _viewPortHandler.centerViewPort(pt: pt, chart: self)
-        }
-        else
-        {
-            _sizeChangeEventActions.append({[weak self] () in self?.moveViewTo(xIndex: xIndex, yValue: yValue, axis: axis); })
-        }
+        let valsInView = getDeltaY(axis) / _viewPortHandler.scaleY
+        
+        let job = MoveViewJob(
+            viewPortHandler: viewPortHandler,
+            xIndex: xIndex,
+            yValue: yValue + Double(valsInView) / 2.0,
+            transformer: getTransformer(axis),
+            view: self)
+        
+        addViewportJob(job)
+    }
+    
+    /// This will move the left side of the current viewport to the specified x-position and center the viewport to the specified y-position animated.
+    /// This also refreshes the chart by calling setNeedsDisplay().
+    ///
+    /// - parameter xIndex:
+    /// - parameter yValue:
+    /// - parameter axis: which axis should be used as a reference for the y-axis
+    /// - parameter duration: the duration of the animation in seconds
+    /// - parameter easing:
+    public func moveViewToAnimated(
+        xIndex xIndex: CGFloat,
+        yValue: Double,
+        axis: ChartYAxis.AxisDependency,
+        duration: NSTimeInterval,
+        easing: ChartEasingFunctionBlock?)
+    {
+        let bounds = getValueByTouchPoint(
+            pt: CGPoint(x: viewPortHandler.contentLeft, y: viewPortHandler.contentTop),
+            axis: axis)
+        
+        let valsInView = getDeltaY(axis) / _viewPortHandler.scaleY
+        
+        let job = AnimatedMoveViewJob(
+            viewPortHandler: viewPortHandler,
+            xIndex: xIndex,
+            yValue: yValue + Double(valsInView) / 2.0,
+            transformer: getTransformer(axis),
+            view: self,
+            xOrigin: bounds.x,
+            yOrigin: bounds.y,
+            duration: duration,
+            easing: easing)
+        
+        addViewportJob(job)
+    }
+    
+    /// This will move the left side of the current viewport to the specified x-position and center the viewport to the specified y-position animated.
+    /// This also refreshes the chart by calling setNeedsDisplay().
+    ///
+    /// - parameter xIndex:
+    /// - parameter yValue:
+    /// - parameter axis: which axis should be used as a reference for the y-axis
+    /// - parameter duration: the duration of the animation in seconds
+    /// - parameter easing:
+    public func moveViewToAnimated(
+        xIndex xIndex: CGFloat,
+        yValue: Double,
+        axis: ChartYAxis.AxisDependency,
+        duration: NSTimeInterval,
+        easingOption: ChartEasingOption)
+    {
+        moveViewToAnimated(xIndex: xIndex, yValue: yValue, axis: axis, duration: duration, easing: easingFunctionFromOption(easingOption))
+    }
+    
+    /// This will move the left side of the current viewport to the specified x-position and center the viewport to the specified y-position animated.
+    /// This also refreshes the chart by calling setNeedsDisplay().
+    ///
+    /// - parameter xIndex:
+    /// - parameter yValue:
+    /// - parameter axis: which axis should be used as a reference for the y-axis
+    /// - parameter duration: the duration of the animation in seconds
+    /// - parameter easing:
+    public func moveViewToAnimated(
+        xIndex xIndex: CGFloat,
+        yValue: Double,
+        axis: ChartYAxis.AxisDependency,
+        duration: NSTimeInterval)
+    {
+        moveViewToAnimated(xIndex: xIndex, yValue: yValue, axis: axis, duration: duration, easingOption: .EaseInOutSine)
     }
     
     /// This will move the center of the current viewport to the specified x-index and y-value.
@@ -1152,22 +1285,90 @@ public class BarLineChartViewBase: ChartViewBase, BarLineScatterCandleBubbleChar
     /// - parameter xIndex:
     /// - parameter yValue:
     /// - parameter axis: - which axis should be used as a reference for the y-axis
-    public func centerViewTo(xIndex xIndex: Int, yValue: CGFloat, axis: ChartYAxis.AxisDependency)
+    public func centerViewTo(
+        xIndex xIndex: CGFloat,
+        yValue: Double,
+        axis: ChartYAxis.AxisDependency)
     {
-        if (_viewPortHandler.hasChartDimens)
-        {
-            let valsInView = getDeltaY(axis) / _viewPortHandler.scaleY
-            let xsInView = CGFloat(xAxis.values.count) / _viewPortHandler.scaleX
-            
-            var pt = CGPoint(x: CGFloat(xIndex) - xsInView / 2.0, y: yValue + valsInView / 2.0)
-            
-            getTransformer(axis).pointValueToPixel(&pt)
-            _viewPortHandler.centerViewPort(pt: pt, chart: self)
-        }
-        else
-        {
-            _sizeChangeEventActions.append({[weak self] () in self?.centerViewTo(xIndex: xIndex, yValue: yValue, axis: axis); })
-        }
+        let valsInView = getDeltaY(axis) / _viewPortHandler.scaleY
+        let xsInView = CGFloat(xAxis.values.count) / _viewPortHandler.scaleX
+        
+        let job = MoveViewJob(
+            viewPortHandler: viewPortHandler,
+            xIndex: xIndex - xsInView / 2.0,
+            yValue: yValue + Double(valsInView) / 2.0,
+            transformer: getTransformer(axis),
+            view: self)
+        
+        addViewportJob(job)
+    }
+    
+    /// This will move the center of the current viewport to the specified x-value and y-value animated.
+    ///
+    /// - parameter xIndex:
+    /// - parameter yValue:
+    /// - parameter axis: which axis should be used as a reference for the y-axis
+    /// - parameter duration: the duration of the animation in seconds
+    /// - parameter easing:
+    public func centerViewToAnimated(
+        xIndex xIndex: CGFloat,
+        yValue: Double,
+        axis: ChartYAxis.AxisDependency,
+        duration: NSTimeInterval,
+        easing: ChartEasingFunctionBlock?)
+    {
+        let bounds = getValueByTouchPoint(
+            pt: CGPoint(x: viewPortHandler.contentLeft, y: viewPortHandler.contentTop),
+            axis: axis)
+        
+        let valsInView = getDeltaY(axis) / _viewPortHandler.scaleY
+        let xsInView = CGFloat(xAxis.values.count) / _viewPortHandler.scaleX
+        
+        let job = AnimatedMoveViewJob(
+            viewPortHandler: viewPortHandler,
+            xIndex: xIndex - xsInView / 2.0,
+            yValue: yValue + Double(valsInView) / 2.0,
+            transformer: getTransformer(axis),
+            view: self,
+            xOrigin: bounds.x,
+            yOrigin: bounds.y,
+            duration: duration,
+            easing: easing)
+        
+        addViewportJob(job)
+    }
+    
+    /// This will move the center of the current viewport to the specified x-value and y-value animated.
+    ///
+    /// - parameter xIndex:
+    /// - parameter yValue:
+    /// - parameter axis: which axis should be used as a reference for the y-axis
+    /// - parameter duration: the duration of the animation in seconds
+    /// - parameter easing:
+    public func centerViewToAnimated(
+        xIndex xIndex: CGFloat,
+        yValue: Double,
+        axis: ChartYAxis.AxisDependency,
+        duration: NSTimeInterval,
+        easingOption: ChartEasingOption)
+    {
+        centerViewToAnimated(xIndex: xIndex, yValue: yValue, axis: axis, duration: duration, easing: easingFunctionFromOption(easingOption))
+    }
+    
+    /// This will move the center of the current viewport to the specified x-value and y-value animated.
+    ///
+    /// - parameter xIndex:
+    /// - parameter yValue:
+    /// - parameter axis: which axis should be used as a reference for the y-axis
+    /// - parameter duration: the duration of the animation in seconds
+    /// - parameter easing:
+    public func centerViewToAnimated(
+        xIndex xIndex: CGFloat,
+        yValue: Double,
+        axis: ChartYAxis.AxisDependency,
+        duration: NSTimeInterval)
+    {
+        centerViewToAnimated(xIndex: xIndex, yValue: yValue, axis: axis, duration: duration, easingOption: .EaseInOutSine)
     }
 
     /// Sets custom offsets for the current `ChartViewPort` (the offsets on the sides of the actual chart window). Setting this will prevent the chart from automatically calculating it's offsets. Use `resetViewPortOffsets()` to undo this.

@@ -194,6 +194,28 @@ public class ChartViewPortHandler: NSObject
         return zoom(scaleX: 0.7, scaleY: 0.7, x: x, y: y)
     }
     
+    public func zoom(scaleX scaleX: CGFloat, scaleY: CGFloat) -> CGAffineTransform
+    {
+        return CGAffineTransformScale(_touchMatrix, scaleX, scaleY)
+    }
+    
+    /// Zooms by the specified scale factors and moves the viewport to the specified values.
+    public func zoomAndCenter(scaleX scaleX: CGFloat, scaleY: CGFloat, center: CGPoint, chart: ChartViewBase) -> CGAffineTransform
+    {
+        var saved = _touchMatrix
+        
+        let x = center.x - offsetLeft
+        let y = center.y - offsetTop
+        
+        let contentCenter = self.contentCenter
+        
+        saved = CGAffineTransformScale(saved, scaleX, scaleY)
+        saved = CGAffineTransformTranslate(saved, -contentCenter.x - x, -contentCenter.y - y)
+        
+        return refresh(newMatrix: saved, chart: chart, invalidate: true)
+        
+    }
+    
     /// Resets all zooming and dragging and makes the chart fit exactly it's bounds.
     public func fitScreen() -> CGAffineTransform
     {
