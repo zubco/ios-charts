@@ -116,11 +116,7 @@ public class CombinedChartView: BarLineChartViewBase, LineChartDataProvider, Bar
     {
         get
         {
-            if (_data === nil)
-            {
-                return nil
-            }
-            return (_data as! CombinedChartData!).lineData
+            return (_data as? CombinedChartData)?.lineData
         }
     }
     
@@ -130,11 +126,7 @@ public class CombinedChartView: BarLineChartViewBase, LineChartDataProvider, Bar
     {
         get
         {
-            if (_data === nil)
-            {
-                return nil
-            }
-            return (_data as! CombinedChartData!).barData
+            return (_data as? CombinedChartData)?.barData
         }
     }
     
@@ -144,11 +136,7 @@ public class CombinedChartView: BarLineChartViewBase, LineChartDataProvider, Bar
     {
         get
         {
-            if (_data === nil)
-            {
-                return nil
-            }
-            return (_data as! CombinedChartData!).scatterData
+            return (_data as? CombinedChartData)?.scatterData
         }
     }
     
@@ -158,11 +146,7 @@ public class CombinedChartView: BarLineChartViewBase, LineChartDataProvider, Bar
     {
         get
         {
-            if (_data === nil)
-            {
-                return nil
-            }
-            return (_data as! CombinedChartData!).candleData
+            return (_data as? CombinedChartData)?.candleData
         }
     }
     
@@ -172,11 +156,7 @@ public class CombinedChartView: BarLineChartViewBase, LineChartDataProvider, Bar
     {
         get
         {
-            if (_data === nil)
-            {
-                return nil
-            }
-            return (_data as! CombinedChartData!).bubbleData
+            return (_data as? CombinedChartData)?.bubbleData
         }
     }
     

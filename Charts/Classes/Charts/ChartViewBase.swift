@@ -218,31 +218,25 @@ public class ChartViewBase: UIView, ChartDataProvider, ChartAnimatorDelegate
     /// Removes all DataSets (and thereby Entries) from the chart. Does not remove the x-values. Also refreshes the chart by calling setNeedsDisplay().
     public func clearValues()
     {
-        if (_data !== nil)
-        {
-            _data.clearValues()
-        }
+        _data?.clearValues()
         setNeedsDisplay()
     }
     
     /// - returns: true if the chart is empty (meaning it's data object is either null or contains no entries).
     public func isEmpty() -> Bool
     {
-        if (_data == nil)
+        guard let data = _data else
+        {
+            return true
+        }
+        
+        if (data.yValCount <= 0)
         {
             return true
         }
         else
         {
-            
-            if (_data.yValCount <= 0)
-            {
-                return true
-            }
-            else
-            {
-                return false
-            }
+            return false
         }
     }
     
@@ -489,16 +483,16 @@ public class ChartViewBase: UIView, ChartDataProvider, ChartAnimatorDelegate
             }
         }
         
-        if (callDelegate && delegate != nil)
+        if (callDelegate)
         {
             if (h == nil)
             {
-                delegate!.chartValueNothingSelected?(self)
+                delegate?.chartValueNothingSelected?(self)
             }
             else
             {
                 // notify the listener
-                delegate!.chartValueSelected?(self, entry: entry!, dataSetIndex: h!.dataSetIndex, highlight: h!)
+                delegate?.chartValueSelected?(self, entry: entry!, dataSetIndex: h!.dataSetIndex, highlight: h!)
             }
         }
         
@@ -527,13 +521,13 @@ public class ChartViewBase: UIView, ChartDataProvider, ChartAnimatorDelegate
 
             if (xIndex <= Int(_deltaX) && xIndex <= Int(_deltaX * _animator.phaseX))
             {
-                let e = _data.getEntryForHighlight(highlight)
-                if (e === nil || e!.xIndex != highlight.xIndex)
+                guard let e = _data.getEntryForHighlight(highlight) where
+                    e.xIndex == highlight.xIndex else
                 {
                     continue
                 }
                 
-                let pos = getMarkerPosition(entry: e!, highlight: highlight)
+                let pos = getMarkerPosition(entry: e, highlight: highlight)
 
                 // check bounds
                 if (!_viewPortHandler.isInBounds(x: pos.x, y: pos.y))
@@ -542,17 +536,19 @@ public class ChartViewBase: UIView, ChartDataProvider, ChartAnimatorDelegate
                 }
 
                 // callbacks to update the content
-                marker!.refreshContent(entry: e!, highlight: highlight)
-
-                let markerSize = marker!.size
-                if (pos.y - markerSize.height <= 0.0)
-                {
-                    let y = markerSize.height - pos.y
-                    marker!.draw(context: context, point: CGPoint(x: pos.x, y: pos.y + y))
-                }
-                else
-                {
-                    marker!.draw(context: context, point: pos)
+                if let marker = marker {
+                    marker.refreshContent(entry: e, highlight: highlight)
+                    
+                    let markerSize = marker.size
+                    if (pos.y - markerSize.height <= 0.0)
+                    {
+                        let y = markerSize.height - pos.y
+                        marker.draw(context: context, point: CGPoint(x: pos.x, y: pos.y + y))
+                    }
+                    else
+                    {
+                        marker.draw(context: context, point: pos)
+                    }
                 }
             }
         }
@@ -714,7 +710,6 @@ public class ChartViewBase: UIView, ChartDataProvider, ChartAnimatorDelegate
     /// - returns: the center point of the chart (the whole View) in pixels.
     public var midPoint: CGPoint
     {
-        let bounds = self.bounds
         return CGPoint(x: bounds.origin.x + bounds.size.width / 2.0, y: bounds.origin.y + bounds.size.height / 2.0)
     }
     
@@ -750,14 +745,12 @@ public class ChartViewBase: UIView, ChartDataProvider, ChartAnimatorDelegate
     /// - returns: the x-value at the given index
     public func getXValue(index: Int) -> String!
     {
-        if (_data == nil || _data.xValCount <= index)
+        guard let data = _data
+            where data.xValCount > index else
         {
             return nil
         }
-        else
-        {
-            return _data.xVals[index]
-        }
+        return data.xVals[index]
     }
     
     /// Get all Entry objects at the given index across all DataSets.
@@ -768,10 +761,9 @@ public class ChartViewBase: UIView, ChartDataProvider, ChartAnimatorDelegate
         for (var i = 0, count = _data.dataSetCount; i < count; i++)
         {
             let set = _data.getDataSetByIndex(i)
-            let e = set.entryForXIndex(xIndex)
-            if (e !== nil)
+            if let e = set.entryForXIndex(xIndex)
             {
-                vals.append(e!)
+                vals.append(e)
             }
         }
         
@@ -799,9 +791,8 @@ public class ChartViewBase: UIView, ChartDataProvider, ChartAnimatorDelegate
             CGContextSetFillColorWithColor(context, UIColor.whiteColor().CGColor)
             CGContextFillRect(context, rect)
             
-            if (self.backgroundColor !== nil)
-            {
-                CGContextSetFillColorWithColor(context, self.backgroundColor?.CGColor)
+            if let backgroundColor = self.backgroundColor {
+                CGContextSetFillColorWithColor(context, backgroundColor.CGColor)
                 CGContextFillRect(context, rect)
             }
         }
@@ -868,8 +859,6 @@ public class ChartViewBase: UIView, ChartDataProvider, ChartAnimatorDelegate
     {
         if (keyPath == "bounds" || keyPath == "frame")
         {
-            let bounds = self.bounds
-            
             if (_viewPortHandler !== nil &&
                 (bounds.size.width != _viewPortHandler.chartWidth ||
                 bounds.size.height != _viewPortHandler.chartHeight))

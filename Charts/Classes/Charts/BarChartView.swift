@@ -42,18 +42,15 @@ public class BarChartView: BarLineChartViewBase, BarChartDataProvider
     {
         super.calcMinMax()
         
-        if (_data === nil)
-        {
+        guard let barData = _data as? BarChartData else {
             return
         }
-        
-        let barData = _data as! BarChartData
         
         // increase deltax by 1 because the bars have a width of 1
         _deltaX += 0.5
         
         // extend xDelta to make space for multiple datasets (if ther are one)
-        _deltaX *= CGFloat(_data.dataSetCount)
+        _deltaX *= CGFloat(barData.dataSetCount)
         
         let groupSpace = barData.groupSpace
         _deltaX += CGFloat(barData.xValCount) * groupSpace
@@ -75,10 +72,7 @@ public class BarChartView: BarLineChartViewBase, BarChartDataProvider
     /// - returns: the bounding box of the specified Entry in the specified DataSet. Returns null if the Entry could not be found in the charts data.
     public func getBarBounds(e: BarChartDataEntry) -> CGRect
     {
-        let set = _data.getDataSetForEntry(e) as! IBarChartDataSet!
-        
-        if (set === nil)
-        {
+        guard let set = _data.getDataSetForEntry(e) as? IBarChartDataSet else {
             return CGRectNull
         }
         
@@ -128,7 +122,7 @@ public class BarChartView: BarLineChartViewBase, BarChartDataProvider
     /// flag that enables or disables the highlighting arrow
     public var drawHighlightArrowEnabled: Bool
     {
-        get { return _drawHighlightArrowEnabled; }
+        get { return _drawHighlightArrowEnabled }
         set
         {
             _drawHighlightArrowEnabled = newValue
@@ -139,7 +133,7 @@ public class BarChartView: BarLineChartViewBase, BarChartDataProvider
     /// if set to true, all values are drawn above their bars, instead of below their top
     public var drawValueAboveBarEnabled: Bool
     {
-        get { return _drawValueAboveBarEnabled; }
+        get { return _drawValueAboveBarEnabled }
         set
         {
             _drawValueAboveBarEnabled = newValue
@@ -150,7 +144,7 @@ public class BarChartView: BarLineChartViewBase, BarChartDataProvider
     /// if set to true, a grey area is drawn behind each bar that indicates the maximum value
     public var drawBarShadowEnabled: Bool
     {
-        get { return _drawBarShadowEnabled; }
+        get { return _drawBarShadowEnabled }
         set
         {
             _drawBarShadowEnabled = newValue

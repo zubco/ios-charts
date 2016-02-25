@@ -65,39 +65,24 @@ public class ChartAnimator: NSObject
     
     public func stop()
     {
-        if (_displayLink != nil)
+        _displayLink?.removeFromRunLoop(NSRunLoop.mainRunLoop(), forMode: NSRunLoopCommonModes)
+        _displayLink = nil
+        
+        _enabledX = false
+        _enabledY = false
+        
+        // If we stopped an animation in the middle, we do not want to leave it like this
+        if phaseX != 1.0 || phaseY != 1.0
         {
-            _displayLink.removeFromRunLoop(NSRunLoop.mainRunLoop(), forMode: NSRunLoopCommonModes)
-            _displayLink = nil
+            phaseX = 1.0
+            phaseY = 1.0
             
-            _enabledX = false
-            _enabledY = false
-            
-            // If we stopped an animation in the middle, we do not want to leave it like this
-            if phaseX != 1.0 || phaseY != 1.0
-            {
-                phaseX = 1.0
-                phaseY = 1.0
-                
-                if (delegate != nil)
-                {
-                    delegate!.chartAnimatorUpdated(self)
-                }
-                if (updateBlock != nil)
-                {
-                    updateBlock!()
-                }
-            }
-            
-            if (delegate != nil)
-            {
-                delegate!.chartAnimatorStopped(self)
-            }
-            if (stopBlock != nil)
-            {
-                stopBlock?()
-            }
+            delegate?.chartAnimatorUpdated(self)
+            updateBlock?()
         }
+
+        delegate?.chartAnimatorStopped(self)
+        stopBlock?()
     }
     
     private func updateAnimationPhases(currentTime: NSTimeInterval)
@@ -112,12 +97,9 @@ public class ChartAnimator: NSObject
                 elapsed = duration
             }
            
-            if (_easingX != nil)
-            {
-                phaseX = _easingX!(elapsed: elapsed, duration: duration)
-            }
-            else
-            {
+            if let easingX = _easingX {
+                phaseX = easingX(elapsed: elapsed, duration: duration)
+            } else {
                 phaseX = CGFloat(elapsed / duration)
             }
         }
@@ -131,12 +113,9 @@ public class ChartAnimator: NSObject
                 elapsed = duration
             }
             
-            if (_easingY != nil)
-            {
-                phaseY = _easingY!(elapsed: elapsed, duration: duration)
-            }
-            else
-            {
+            if let easingY = _easingY {
+                phaseY = easingY(elapsed: elapsed, duration: duration)
+            } else {
                 phaseY = CGFloat(elapsed / duration)
             }
         }
@@ -148,14 +127,8 @@ public class ChartAnimator: NSObject
         
         updateAnimationPhases(currentTime)
         
-        if (delegate != nil)
-        {
-            delegate!.chartAnimatorUpdated(self)
-        }
-        if (updateBlock != nil)
-        {
-            updateBlock!()
-        }
+        delegate?.chartAnimatorUpdated(self)
+        updateBlock?()
         
         if (currentTime >= _endTime)
         {
